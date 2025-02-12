@@ -1,0 +1,10 @@
+# Sensitive files
+railway.json
+credentials/
+*.pem
+*.key
+.env
+
+# Keep example files
+!railway.json.example
+!.env.example 
