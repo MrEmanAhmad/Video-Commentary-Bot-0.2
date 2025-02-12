@@ -72,7 +72,7 @@ async def process_video(request: VideoRequest, background_tasks: BackgroundTasks
         })
         
         # Start processing in background
-        job_id = await bot.start_processing(request.video_url, settings)
+        job_id = await bot.start_processing(request.video_url, settings, background_tasks)
         
         return {
             "job_id": job_id,

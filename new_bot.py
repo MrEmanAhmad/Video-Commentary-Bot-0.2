@@ -1328,7 +1328,7 @@ class VideoBot:
             poll_interval=1.0
         )
 
-    async def start_processing(self, video_url: str, settings: dict) -> str:
+    async def start_processing(self, video_url: str, settings: dict, background_tasks: BackgroundTasks) -> str:
         """Start processing a video and return a job ID."""
         try:
             # Generate a unique job ID
