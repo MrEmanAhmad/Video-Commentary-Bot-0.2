@@ -176,13 +176,16 @@ try:
     )
 
     # Initialize OpenAI client with API key from environment
-    openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    openai_client = OpenAI(
+        api_key=os.getenv('OPENAI_API_KEY'),
+        base_url="https://api.openai.com/v1"
+    )
     logger.info("✓ OpenAI client initialized")
 
     # Initialize DeepSeek client with API key from environment
     deepseek_client = OpenAI(
         api_key=os.getenv('DEEPSEEK_API_KEY'),
-        base_url="https://api.deepseek.com"
+        base_url="https://api.deepseek.com/v1"
     )
     logger.info("✓ DeepSeek client initialized")
 

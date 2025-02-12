@@ -150,5 +150,6 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 EXPOSE ${PORT}
 
 # Start the FastAPI server with Xvfb for headless browser support
-CMD Xvfb :99 -screen 0 1280x1024x24 -ac +extension GLX +render -noreset & \
+CMD rm -f /tmp/.X99-lock && \
+    Xvfb :99 -screen 0 1280x1024x24 -ac +extension GLX +render -noreset & \
     python -m uvicorn api:app --host 0.0.0.0 --port ${PORT} 
