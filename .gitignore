@@ -7,4 +7,7 @@ credentials/
 
 # Keep example files
 !railway.json.example
-!.env.example 
+!.env.example
+
+# Output job directories
+output_job_*/ 
