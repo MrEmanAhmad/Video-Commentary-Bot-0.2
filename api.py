@@ -8,16 +8,7 @@ from typing import Optional, Dict, Any
 import json
 from datetime import datetime
 import shutil
-
-# Import pipeline modules
-from pipeline import (
-    Step_1_download_video,
-    Step_2_extract_frames,
-    Step_3_analyze_frames,
-    Step_4_generate_commentary,
-    Step_5_generate_audio,
-    Step_6_video_generation
-)
+from openai import OpenAI
 
 # Configure logging
 logging.basicConfig(
@@ -25,6 +16,184 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Load configuration
+try:
+    # Define required variables
+    required_vars = [
+        'OPENAI_API_KEY',
+        'DEEPSEEK_API_KEY',
+        'GOOGLE_APPLICATION_CREDENTIALS_JSON',
+        'CLOUDINARY_CLOUD_NAME',
+        'CLOUDINARY_API_KEY',
+        'CLOUDINARY_API_SECRET'
+    ]
+    
+    # First try to get variables from environment (Railway)
+    env_vars = {var: os.getenv(var) for var in required_vars}
+    missing_vars = [var for var, value in env_vars.items() if not value]
+    
+    # Log environment status
+    logger.info("Checking environment variables...")
+    for var in required_vars:
+        if os.getenv(var):
+            logger.info(f"✓ Found {var} in environment")
+        else:
+            logger.warning(f"✗ Missing {var} in environment")
+    
+    # Try to load from railway.json if any variables are missing
+    if missing_vars:
+        logger.info("Some variables missing, checking railway.json...")
+        railway_file = Path("railway.json")
+        if railway_file.exists():
+            logger.info("Found railway.json, loading configuration...")
+            with open(railway_file, 'r') as f:
+                config = json.load(f)
+            for var in missing_vars:
+                if var in config:
+                    os.environ[var] = str(config[var])
+                    logger.info(f"Loaded {var} from railway.json")
+        else:
+            logger.warning("railway.json not found")
+    
+    # Final check for required variables
+    still_missing = [var for var in required_vars if not os.getenv(var)]
+    if still_missing:
+        error_msg = f"Missing required environment variables: {', '.join(still_missing)}"
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+    
+    # Set up Google credentials
+    if "GOOGLE_APPLICATION_CREDENTIALS_JSON" in os.environ:
+        try:
+            # Create credentials directory with proper permissions
+            creds_dir = Path("credentials")
+            creds_dir.mkdir(exist_ok=True, mode=0o777)
+            
+            google_creds_file = creds_dir / "google_credentials.json"
+            
+            # Get credentials JSON and ensure it's properly formatted
+            creds_json_str = os.environ["GOOGLE_APPLICATION_CREDENTIALS_JSON"]
+            logger.info("Attempting to parse Google credentials...")
+            
+            # Try multiple parsing approaches
+            try:
+                # First, try direct JSON parsing
+                creds_json = json.loads(creds_json_str)
+            except json.JSONDecodeError as je:
+                logger.warning(f"Direct JSON parsing failed: {je}")
+                try:
+                    # Try cleaning the string and parsing again
+                    cleaned_str = creds_json_str.replace('\n', '\\n').replace('\r', '\\r')
+                    creds_json = json.loads(cleaned_str)
+                except json.JSONDecodeError:
+                    logger.warning("Cleaned JSON parsing failed, trying literal eval")
+                    try:
+                        # Try literal eval as last resort
+                        import ast
+                        creds_json = ast.literal_eval(creds_json_str)
+                    except (SyntaxError, ValueError) as e:
+                        logger.error(f"All parsing attempts failed. Original error: {e}")
+                        # Log the first and last few characters of the string for debugging
+                        str_preview = f"{creds_json_str[:100]}...{creds_json_str[-100:]}" if len(creds_json_str) > 200 else creds_json_str
+                        logger.error(f"Credentials string preview: {str_preview}")
+                        raise ValueError("Could not parse Google credentials. Please check the format.")
+            
+            # Validate required fields
+            required_fields = [
+                "type", "project_id", "private_key_id", "private_key",
+                "client_email", "client_id", "auth_uri", "token_uri",
+                "auth_provider_x509_cert_url", "client_x509_cert_url"
+            ]
+            missing_fields = [field for field in required_fields if field not in creds_json]
+            if missing_fields:
+                raise ValueError(f"Missing required fields in credentials: {', '.join(missing_fields)}")
+            
+            # Ensure private key is properly formatted
+            if 'private_key' in creds_json:
+                # Normalize line endings and ensure proper PEM format
+                private_key = creds_json['private_key']
+                if not private_key.startswith('-----BEGIN PRIVATE KEY-----'):
+                    private_key = f"-----BEGIN PRIVATE KEY-----\n{private_key}"
+                if not private_key.endswith('-----END PRIVATE KEY-----'):
+                    private_key = f"{private_key}\n-----END PRIVATE KEY-----"
+                creds_json['private_key'] = private_key.replace('\\n', '\n')
+            
+            # Write credentials file with proper permissions
+            with open(google_creds_file, 'w') as f:
+                json.dump(creds_json, f, indent=2)
+            
+            # Set file permissions
+            google_creds_file.chmod(0o600)
+            
+            # Set environment variable to absolute path
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(google_creds_file.absolute())
+            logger.info("✓ Google credentials configured successfully")
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON format in credentials: {e}")
+            raise ValueError("Google credentials JSON is not properly formatted")
+        except ValueError as e:
+            logger.error(f"Invalid credentials content: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Error setting up Google credentials: {e}")
+            raise
+
+    # Initialize Cloudinary configuration
+    cloudinary_vars = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']
+    if all(os.getenv(var) for var in cloudinary_vars):
+        import cloudinary
+        cloudinary.config(
+            cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+            api_key=os.getenv('CLOUDINARY_API_KEY'),
+            api_secret=os.getenv('CLOUDINARY_API_SECRET'),
+            secure=True,
+            chunk_size=6000000,  # 6MB chunks for faster uploads
+            use_cache=True,
+            cache_duration=3600  # 1 hour cache
+        )
+        # Explicitly set environment variables to ensure they're available to subprocesses
+        os.environ['CLOUDINARY_CLOUD_NAME'] = os.getenv('CLOUDINARY_CLOUD_NAME')
+        os.environ['CLOUDINARY_API_KEY'] = os.getenv('CLOUDINARY_API_KEY')
+        os.environ['CLOUDINARY_API_SECRET'] = os.getenv('CLOUDINARY_API_SECRET')
+        logger.info("✓ Cloudinary client initialized")
+    else:
+        logger.error("Missing Cloudinary credentials")
+        raise ValueError("Missing required Cloudinary credentials")
+
+    # Continue with the rest of the imports and initialization
+    logger.info("✓ Configuration loaded successfully")
+    
+    # Import pipeline modules
+    from pipeline import (
+        Step_1_download_video,
+        Step_2_extract_frames,
+        Step_3_analyze_frames,
+        Step_4_generate_commentary,
+        Step_5_generate_audio,
+        Step_6_video_generation
+    )
+
+    # Initialize OpenAI client with API key from environment
+    openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    logger.info("✓ OpenAI client initialized")
+
+    # Initialize DeepSeek client with API key from environment
+    deepseek_client = OpenAI(
+        api_key=os.getenv('DEEPSEEK_API_KEY'),
+        base_url="https://api.deepseek.com"
+    )
+    logger.info("✓ DeepSeek client initialized")
+
+    # Initialize Google Text-to-Speech client
+    from google.cloud import texttospeech
+    tts_client = texttospeech.TextToSpeechClient()
+    logger.info("✓ Google Text-to-Speech client initialized")
+
+except Exception as e:
+    logger.error(f"Initialization error: {e}", exc_info=True)
+    raise
 
 app = FastAPI(title="Video Commentary Bot API")
 
@@ -46,17 +215,50 @@ DEFAULT_SETTINGS = {
     'auto_cleanup': True
 }
 
+# Voice configurations
+VOICE_CONFIGS = {
+    'en': {
+        'MALE': texttospeech.VoiceSelectionParams(
+            language_code="en-GB",
+            name="en-GB-Journey-D",
+            ssml_gender=texttospeech.SsmlVoiceGender.MALE
+        ),
+        'FEMALE': texttospeech.VoiceSelectionParams(
+            language_code="en-GB",
+            ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
+        )
+    },
+    'ur': {
+        'MALE': texttospeech.VoiceSelectionParams(
+            language_code="ur-PK",
+            ssml_gender=texttospeech.SsmlVoiceGender.MALE
+        ),
+        'FEMALE': texttospeech.VoiceSelectionParams(
+            language_code="ur-PK",
+            ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
+        )
+    }
+}
+
+# Audio configuration
+AUDIO_CONFIG = texttospeech.AudioConfig(
+    audio_encoding=texttospeech.AudioEncoding.MP3,
+    speaking_rate=1.0,
+    pitch=0.0,
+    effects_profile_id=["headphone-class-device"]
+)
+
 class VideoRequest(BaseModel):
     video_url: str
     style: Optional[str] = "news"
     language: Optional[str] = "en"
-    model: Optional[str] = "gpt-4"
+    model: Optional[str] = "gpt-4o-mini"
     voice_gender: Optional[str] = "MALE"
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "video-commentary-bot"}
+    return {"status": "healthy"}
 
 async def process_video_task(video_url: str, output_dir: Path, settings: dict):
     """Process video from URL."""
@@ -127,21 +329,42 @@ async def process_video_task(video_url: str, output_dir: Path, settings: dict):
                 video_duration=duration
             )
             
-            # Generate commentary
+            # Generate commentary using the specified model
             logger.info("Generating commentary...")
-            audio_script = await Step_4_generate_commentary.execute_step(
-                frames_info,
-                output_dir,
-                settings['style']
+            if settings['model'] == "gpt-4o-mini":
+                completion = openai_client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "developer", "content": "Generate engaging video commentary."},
+                        {"role": "user", "content": json.dumps(frames_info)}
+                    ]
+                )
+                audio_script = completion.choices[0].message.content
+            else:
+                response = deepseek_client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=[
+                        {"role": "system", "content": "Generate engaging video commentary."},
+                        {"role": "user", "content": json.dumps(frames_info)}
+                    ],
+                    stream=False
+                )
+                audio_script = response.choices[0].message.content
+            
+            # Generate audio using Google Text-to-Speech
+            logger.info("Generating audio...")
+            voice_params = VOICE_CONFIGS[settings['language']][settings['voice_gender']]
+            
+            synthesis_input = texttospeech.SynthesisInput(text=audio_script)
+            audio_response = tts_client.synthesize_speech(
+                input=synthesis_input,
+                voice=voice_params,
+                audio_config=AUDIO_CONFIG
             )
             
-            # Generate audio
-            logger.info("Generating audio...")
-            audio_path = await Step_5_generate_audio.execute_step(
-                audio_script,
-                output_dir,
-                settings['style']
-            )
+            audio_path = output_dir / "output_audio.mp3"
+            with open(audio_path, "wb") as out:
+                out.write(audio_response.audio_content)
             
             # Generate final video
             logger.info("Creating final video...")
