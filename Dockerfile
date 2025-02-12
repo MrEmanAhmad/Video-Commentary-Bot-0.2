@@ -54,23 +54,52 @@ WORKDIR /app
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install Python dependencies with optimizations
+# Install Python dependencies in stages for better error handling and caching
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    echo "Installing base dependencies..." && \
-    pip install --no-cache-dir numpy==1.24.3 pandas==2.2.3 psutil==5.9.8 python-dotenv==1.0.0 openai==1.3.5 cloudinary==1.38.0 aiohttp==3.9.3 aiosignal==1.3.2 aiodns==3.1.1 aiolimiter==1.1.1 google-cloud-vision==3.9.0 google-cloud-texttospeech==2.14.1 moviepy==1.0.3 ffmpeg-python==0.2.0 && \
-    echo "Installing OpenCV..." && \
-    pip install --no-cache-dir opencv-python-headless==4.11.0.86 && \
-    echo "Installing core ML dependencies..." && \
-    pip install --no-cache-dir scikit-image==0.25.1 scipy==1.15.1 && \
-    echo "Installing web dependencies..." && \
-    pip install --no-cache-dir fastapi==0.115.8 uvicorn==0.34.0 && \
-    echo "Installing Google Cloud dependencies..." && \
-    pip install --no-cache-dir google-cloud-vision==3.9.0 google-cloud-texttospeech==2.14.1 && \
-    echo "Installing remaining requirements..." && \
+    # Stage 1: Install base numerical and scientific packages
+    pip install --no-cache-dir \
+    numpy==1.24.3 \
+    pandas==2.2.3 \
+    scipy==1.15.1 \
+    pillow==10.2.0 \
+    && \
+    # Stage 2: Install networking and async packages
+    pip install --no-cache-dir \
+    aiohttp==3.9.3 \
+    aiosignal==1.3.2 \
+    aiodns==3.1.1 \
+    aiolimiter==1.1.1 \
+    requests==2.32.3 \
+    httpx==0.25.2 \
+    && \
+    # Stage 3: Install ML and computer vision packages
+    pip install --no-cache-dir \
+    opencv-python-headless==4.11.0.86 \
+    scikit-image==0.25.1 \
+    && \
+    # Stage 4: Install API clients and cloud services
+    pip install --no-cache-dir \
+    openai==1.3.5 \
+    cloudinary==1.38.0 \
+    google-cloud-vision==3.9.0 \
+    google-cloud-texttospeech==2.14.1 \
+    && \
+    # Stage 5: Install web framework dependencies
+    pip install --no-cache-dir \
+    fastapi==0.115.8 \
+    uvicorn==0.34.0 \
+    python-multipart==0.0.20 \
+    python-jose==3.3.0 \
+    && \
+    # Stage 6: Install video processing dependencies
+    pip install --no-cache-dir \
+    moviepy==1.0.3 \
+    ffmpeg-python==0.2.0 \
+    yt-dlp \
+    && \
+    # Stage 7: Install remaining requirements
     pip install --no-cache-dir -r requirements.txt && \
-    echo "Installing yt-dlp..." && \
-    pip install --no-cache-dir yt-dlp && \
-    # Clean up pip cache
+    # Cleanup
     rm -rf /root/.cache/pip/* && \
     # Pre-compile Python files
     python -m compileall /app
