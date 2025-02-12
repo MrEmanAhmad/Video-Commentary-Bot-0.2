@@ -28,6 +28,11 @@ app.add_middleware(
 # Initialize VideoBot
 bot = VideoBot()
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "service": "video-commentary-bot"}
+
 class VideoRequest(BaseModel):
     video_url: str
     style: Optional[str] = "news"

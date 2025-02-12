@@ -158,22 +158,11 @@ ENV HOME=/home/app_user \
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8501}/_stcore/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Expose the ports that will be used by Streamlit and FastAPI
-EXPOSE ${PORT:-8501}
-EXPOSE ${API_PORT:-8000}
+# Expose the port for FastAPI
+EXPOSE ${PORT:-8000}
 
-# Start Xvfb and run both Streamlit and FastAPI
+# Start Xvfb and run FastAPI only
 CMD Xvfb :99 -screen 0 1280x1024x24 -ac +extension GLX +render -noreset & \
-    python -m uvicorn api:app --host 0.0.0.0 --port ${API_PORT:-8000} & \
-    streamlit run \
-    --server.port=${PORT:-8501} \
-    --server.address=0.0.0.0 \
-    --server.maxUploadSize=50 \
-    --server.enableCORS=false \
-    --server.enableXsrfProtection=false \
-    --server.maxMessageSize=200 \
-    --browser.gatherUsageStats=false \
-    --theme.base=dark \
-    streamlit_app.py 
+    python -m uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000} 
