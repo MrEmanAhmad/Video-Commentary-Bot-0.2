@@ -18,6 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 import cv2
 import shutil
 from datetime import datetime
+from fastapi import HTTPException, BackgroundTasks
 
 # Add the current directory to Python path
 sys.path.append(str(Path(__file__).parent))
@@ -28,6 +29,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Create background tasks
+background_tasks = BackgroundTasks()
 
 # Load configuration
 required_vars = [
@@ -1323,6 +1327,73 @@ class VideoBot:
             # Limit polling frequency
             poll_interval=1.0
         )
+
+    async def start_processing(self, video_url: str, settings: dict) -> str:
+        """Start processing a video and return a job ID."""
+        try:
+            # Generate a unique job ID
+            job_id = f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            # Create output directory
+            output_dir = Path(f"output_{job_id}")
+            output_dir.mkdir(exist_ok=True)
+            
+            try:
+                # Start processing in background
+                background_tasks.add_task(
+                    self.process_video_from_url,
+                    video_url=video_url,
+                    output_dir=output_dir,
+                    settings=settings
+                )
+                
+                return job_id
+                
+            except Exception as e:
+                logger.error(f"Error starting video processing: {str(e)}")
+                if output_dir.exists():
+                    shutil.rmtree(output_dir)
+                raise
+                
+        except Exception as e:
+            logger.error(f"Error in start_processing: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    async def get_job_status(self, job_id: str) -> dict:
+        """Get the status of a processing job."""
+        try:
+            output_dir = Path(f"output_{job_id}")
+            
+            # Check if the output directory exists
+            if not output_dir.exists():
+                return {
+                    "status": "not_found",
+                    "message": "Job not found"
+                }
+            
+            # Check for status file
+            status_file = output_dir / "status.json"
+            if status_file.exists():
+                with open(status_file, 'r') as f:
+                    return json.load(f)
+            
+            # Check for final video
+            final_video = next(output_dir.glob("*.mp4"), None)
+            if final_video:
+                return {
+                    "status": "completed",
+                    "result": str(final_video)
+                }
+            
+            # If neither status file nor final video exists, assume processing
+            return {
+                "status": "processing",
+                "message": "Video is being processed"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting job status: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == '__main__':
     bot = VideoBot()
