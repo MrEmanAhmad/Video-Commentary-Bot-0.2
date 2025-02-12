@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import logging
 from pathlib import Path
@@ -15,6 +16,15 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Video Commentary Bot API")
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 # Initialize VideoBot
 bot = VideoBot()
 
@@ -24,6 +34,11 @@ class VideoRequest(BaseModel):
     language: Optional[str] = "en"
     model: Optional[str] = "gpt-4"
     voice_gender: Optional[str] = "MALE"
+
+@app.options("/process_video")
+async def process_video_preflight():
+    """Handle preflight requests for the process_video endpoint"""
+    return {}
 
 @app.post("/process_video")
 async def process_video(request: VideoRequest, background_tasks: BackgroundTasks):

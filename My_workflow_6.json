@@ -1,0 +1,147 @@
+{
+  "name": "My workflow 6",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        60
+      ],
+      "id": "c4bc3b2b-9cd4-4e88-b1e5-cca933350220",
+      "name": "When chat message received",
+      "webhookId": "47cbaf5f-939e-46cd-89cf-eb14b2f7ab86"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://video-commentary-bot-02-production.up.railway.app/process_video",
+        "sendBody": true,
+        "headers": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-workflow"
+            }
+          ]
+        },
+        "body": "={{ JSON.stringify({video_url: encodeURI($json.message.trim()), style: 'news', language: 'en', model: 'gpt-4', voice_gender: 'MALE'}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          },
+          "redirect": {
+            "followRedirects": true
+          },
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        60
+      ],
+      "id": "0df74318-41a9-4edb-a14f-1482e3000b8e",
+      "name": "Process Video"
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1160,
+        60
+      ],
+      "id": "bf841d95-8f9b-4a7d-9bbc-70443bbe5ea0",
+      "name": "Wait",
+      "webhookId": "bae1ea14-7216-457b-b6c0-f34057ea6208"
+    },
+    {
+      "parameters": {
+        "url": "=https://video-commentary-bot-02-production.up.railway.app/job_status/{{ $node['Process Video'].json.job_id }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        300
+      ],
+      "id": "4a224c16-3580-4c4e-8848-74fce5e25c12",
+      "name": "Check Status"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Process Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Video": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Check Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9d823f99-858c-4837-8330-1e8bc82e2e9b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "418c24cfd6f410ae5fa15c01a1a2c73c854f8c9d230c9d79605b9febddb33b56"
+  },
+  "id": "SjpKzd0VFj1g19lA",
+  "tags": []
+}
