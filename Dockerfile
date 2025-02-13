@@ -111,18 +111,24 @@ RUN mkdir -p \
 # Copy the entire application
 COPY . .
 
+# Create X11 directory with proper permissions
+RUN mkdir -p /tmp/.X11-unix && \
+    chmod 1777 /tmp/.X11-unix
+
 # Set proper permissions
 RUN chown -R app_user:app_user \
     /app \
     /home/app_user/.cache \
     /home/app_user/.config \
+    /tmp/.X11-unix \
     && chmod -R 755 /app pipeline \
     && chmod -R 777 \
     /app/credentials \
     /app/analysis_temp \
     /app/framesAndLogo \
     /home/app_user/.config \
-    /home/app_user/.cache
+    /home/app_user/.cache \
+    /tmp/.X11-unix
 
 # Switch to non-root user
 USER app_user
@@ -150,6 +156,7 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 EXPOSE ${PORT}
 
 # Start the FastAPI server with Xvfb for headless browser support
-CMD rm -f /tmp/.X99-lock && \
+CMD mkdir -p /tmp/.X11-unix && \
+    rm -f /tmp/.X99-lock && \
     Xvfb :99 -screen 0 1280x1024x24 -ac +extension GLX +render -noreset & \
     python -m uvicorn api:app --host 0.0.0.0 --port ${PORT} 

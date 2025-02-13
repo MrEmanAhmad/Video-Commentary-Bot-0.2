@@ -176,23 +176,32 @@ try:
     )
 
     # Initialize OpenAI client with API key from environment
-    openai_client = OpenAI(
-        api_key=os.getenv('OPENAI_API_KEY'),
-        base_url="https://api.openai.com/v1"
-    )
-    logger.info("✓ OpenAI client initialized")
+    try:
+        openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        logger.info("✓ OpenAI client initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize OpenAI client: {e}")
+        raise
 
     # Initialize DeepSeek client with API key from environment
-    deepseek_client = OpenAI(
-        api_key=os.getenv('DEEPSEEK_API_KEY'),
-        base_url="https://api.deepseek.com/v1"
-    )
-    logger.info("✓ DeepSeek client initialized")
+    try:
+        deepseek_client = OpenAI(
+            api_key=os.getenv('DEEPSEEK_API_KEY'),
+            base_url="https://api.deepseek.com/v1"
+        )
+        logger.info("✓ DeepSeek client initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize DeepSeek client: {e}")
+        raise
 
     # Initialize Google Text-to-Speech client
-    from google.cloud import texttospeech
-    tts_client = texttospeech.TextToSpeechClient()
-    logger.info("✓ Google Text-to-Speech client initialized")
+    try:
+        from google.cloud import texttospeech
+        tts_client = texttospeech.TextToSpeechClient()
+        logger.info("✓ Google Text-to-Speech client initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize Text-to-Speech client: {e}")
+        raise
 
 except Exception as e:
     logger.error(f"Initialization error: {e}", exc_info=True)
