@@ -177,10 +177,7 @@ try:
 
     # Initialize OpenAI client with API key from environment
     try:
-        openai_client = OpenAI(
-            api_key=os.getenv('OPENAI_API_KEY'),
-            default_headers={"Content-Type": "application/json"}
-        )
+        openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         logger.info("✓ OpenAI client initialized")
     except Exception as e:
         logger.error(f"Failed to initialize OpenAI client: {e}")
@@ -190,8 +187,7 @@ try:
     try:
         deepseek_client = OpenAI(
             api_key=os.getenv('DEEPSEEK_API_KEY'),
-            base_url="https://api.deepseek.com/v1",
-            default_headers={"Content-Type": "application/json"}
+            base_url="https://api.deepseek.com"
         )
         logger.info("✓ DeepSeek client initialized")
     except Exception as e:
@@ -351,22 +347,18 @@ async def process_video_task(video_url: str, output_dir: Path, settings: dict):
                 completion = openai_client.chat.completions.create(
                     model="gpt-4o",
                     messages=[
-                        {"role": "system", "content": "Generate engaging video commentary."},
+                        {"role": "developer", "content": ""},
                         {"role": "user", "content": json.dumps(frames_info)}
-                    ],
-                    temperature=0.7,
-                    max_tokens=1000
+                    ]
                 )
-                audio_script = completion.choices[0].message.content
+                audio_script = completion.choices[0].message
             else:
                 response = deepseek_client.chat.completions.create(
                     model="deepseek-chat",
                     messages=[
-                        {"role": "system", "content": "Generate engaging video commentary."},
+                        {"role": "system", "content": ""},
                         {"role": "user", "content": json.dumps(frames_info)}
                     ],
-                    temperature=0.7,
-                    max_tokens=1000,
                     stream=False
                 )
                 audio_script = response.choices[0].message.content
