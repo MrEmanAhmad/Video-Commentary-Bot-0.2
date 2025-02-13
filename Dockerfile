@@ -20,6 +20,7 @@ RUN apt-get update && \
     echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
+    sudo \
     google-chrome-stable \
     chromium-driver \
     ffmpeg \
@@ -112,23 +113,27 @@ RUN mkdir -p \
 COPY . .
 
 # Create X11 directory with proper permissions
+USER root
 RUN mkdir -p /tmp/.X11-unix && \
-    chmod 1777 /tmp/.X11-unix
+    chmod 1777 /tmp/.X11-unix && \
+    chown root:root /tmp/.X11-unix
 
 # Set proper permissions
 RUN chown -R app_user:app_user \
     /app \
     /home/app_user/.cache \
     /home/app_user/.config \
-    /tmp/.X11-unix \
     && chmod -R 755 /app pipeline \
     && chmod -R 777 \
     /app/credentials \
     /app/analysis_temp \
     /app/framesAndLogo \
     /home/app_user/.config \
-    /home/app_user/.cache \
-    /tmp/.X11-unix
+    /home/app_user/.cache
+
+# Add app_user to sudo group and configure passwordless sudo for X11 management
+RUN adduser app_user sudo && \
+    echo "app_user ALL=(ALL) NOPASSWD: /usr/bin/chown root:root /tmp/.X11-unix/, /usr/bin/chmod 1777 /tmp/.X11-unix/" >> /etc/sudoers
 
 # Switch to non-root user
 USER app_user
@@ -157,6 +162,8 @@ EXPOSE ${PORT}
 
 # Start the FastAPI server with Xvfb for headless browser support
 CMD mkdir -p /tmp/.X11-unix && \
+    sudo chown root:root /tmp/.X11-unix && \
+    sudo chmod 1777 /tmp/.X11-unix && \
     rm -f /tmp/.X99-lock && \
     Xvfb :99 -screen 0 1280x1024x24 -ac +extension GLX +render -noreset & \
     python -m uvicorn api:app --host 0.0.0.0 --port ${PORT} 
