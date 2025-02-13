@@ -177,7 +177,7 @@ try:
 
     # Initialize OpenAI client with API key from environment
     try:
-        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         logger.info("✓ OpenAI client initialized")
     except Exception as e:
         logger.error(f"Failed to initialize OpenAI client: {e}")
@@ -197,7 +197,7 @@ try:
     # Initialize Google Text-to-Speech client
     try:
         from google.cloud import texttospeech
-        client = texttospeech.TextToSpeechClient()
+        tts_client = texttospeech.TextToSpeechClient()
         logger.info("✓ Google Text-to-Speech client initialized")
     except Exception as e:
         logger.error(f"Failed to initialize Text-to-Speech client: {e}")
@@ -267,7 +267,7 @@ def synthesize_speech(text, voice_params, is_ssml=False):
     else:
         synthesis_input = texttospeech.SynthesisInput(text=text)
         
-    response = client.synthesize_speech(
+    response = tts_client.synthesize_speech(
         input=synthesis_input,
         voice=voice_params,
         audio_config=AUDIO_CONFIG
@@ -362,7 +362,7 @@ async def process_video_task(video_url: str, output_dir: Path, settings: dict):
             # Generate commentary using the specified model
             logger.info("Generating commentary...")
             if settings['model'] == "gpt-4o-mini":
-                completion = client.chat.completions.create(
+                completion = openai_client.chat.completions.create(
                     model="gpt-4o",
                     messages=[
                         {"role": "developer", "content": ""},
