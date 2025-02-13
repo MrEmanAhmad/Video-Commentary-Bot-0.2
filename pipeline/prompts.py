@@ -43,6 +43,7 @@ class PromptManager:
                     api_key=os.getenv('DEEPSEEK_API_KEY'),
                     base_url="https://api.deepseek.com"
                 )
+                
         except Exception as e:
             logger.error(f"Error setting up {self.provider.value} client: {str(e)}")
             raise

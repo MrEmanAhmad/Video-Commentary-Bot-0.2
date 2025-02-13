@@ -178,7 +178,7 @@ try:
     # Initialize OpenAI client with API key from environment
     try:
         openai_client = OpenAI(
-            api_key=os.getenv('OPENAI_API_KEY')
+            api_key=os.getenv("OPENAI_API_KEY")
         )
         logger.info("✓ OpenAI client initialized")
     except Exception as e:
