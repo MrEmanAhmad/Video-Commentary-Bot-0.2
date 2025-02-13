@@ -260,6 +260,24 @@ AUDIO_CONFIG = texttospeech.AudioConfig(
     effects_profile_id=["headphone-class-device"]
 )
 
+async def synthesize_speech(text, voice_params, output_dir, is_ssml=False):
+    """Synthesize speech from text using Google Text-to-Speech."""
+    if is_ssml:
+        synthesis_input = texttospeech.SynthesisInput(ssml=text)
+    else:
+        synthesis_input = texttospeech.SynthesisInput(text=text)
+        
+    response = tts_client.synthesize_speech(
+        input=synthesis_input,
+        voice=voice_params,
+        audio_config=AUDIO_CONFIG
+    )
+    
+    output_path = output_dir / "output_audio.mp3"
+    with open(output_path, "wb") as out:
+        out.write(response.audio_content)
+    return output_path
+
 class VideoRequest(BaseModel):
     video_url: str
     style: Optional[str] = "news"
@@ -347,16 +365,16 @@ async def process_video_task(video_url: str, output_dir: Path, settings: dict):
                 completion = openai_client.chat.completions.create(
                     model="gpt-4o",
                     messages=[
-                        {"role": "developer", "content": ""},
+                        {"role": "developer", "content": "Generate engaging video commentary."},
                         {"role": "user", "content": json.dumps(frames_info)}
                     ]
                 )
-                audio_script = completion.choices[0].message
+                audio_script = completion.choices[0].message.content
             else:
                 response = deepseek_client.chat.completions.create(
                     model="deepseek-chat",
                     messages=[
-                        {"role": "system", "content": ""},
+                        {"role": "system", "content": "Generate engaging video commentary."},
                         {"role": "user", "content": json.dumps(frames_info)}
                     ],
                     stream=False
@@ -366,17 +384,11 @@ async def process_video_task(video_url: str, output_dir: Path, settings: dict):
             # Generate audio using Google Text-to-Speech
             logger.info("Generating audio...")
             voice_params = VOICE_CONFIGS[settings['language']][settings['voice_gender']]
-            
-            synthesis_input = texttospeech.SynthesisInput(text=audio_script)
-            audio_response = tts_client.synthesize_speech(
-                input=synthesis_input,
-                voice=voice_params,
-                audio_config=AUDIO_CONFIG
+            audio_path = await synthesize_speech(
+                text=audio_script,
+                voice_params=voice_params,
+                output_dir=output_dir
             )
-            
-            audio_path = output_dir / "output_audio.mp3"
-            with open(audio_path, "wb") as out:
-                out.write(audio_response.audio_content)
             
             # Generate final video
             logger.info("Creating final video...")
