@@ -93,7 +93,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     echo "Installing Selenium and related..." && \
     pip install --no-cache-dir selenium==4.28.1 webdriver-manager==4.0.2 undetected-chromedriver==3.5.5 && \
     echo "Installing OpenAI and dependencies..." && \
-    pip install --no-cache-dir "httpx>=0.25.2" "openai==1.3.5" "httpcore>=1.0.2" "anyio>=3.5.0" "sniffio>=1.1" && \
+    pip install --no-cache-dir "httpx==0.28.1" "openai==1.62.0" "httpcore>=1.0.2" "anyio>=3.5.0" "sniffio>=1.1" && \
     echo "Installing cloud services..." && \
     pip install --no-cache-dir cloudinary==1.38.0 aiohttp==3.11.12 aiosignal==1.3.2 aiodns==3.1.1 aiolimiter==1.1.1 async-timeout==5.0.1 google-cloud-vision==3.10.0 google-cloud-texttospeech==2.14.1 && \
     echo "Installing OpenCV..." && \
