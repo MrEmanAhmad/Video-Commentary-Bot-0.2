@@ -103,7 +103,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     echo "Installing web dependencies..." && \
     pip install --no-cache-dir fastapi==0.115.8 uvicorn==0.34.0 && \
     echo "Installing yt-dlp..." && \
-    pip install --no-cache-dir yt-dlp && \
+    pip install --no-cache-dir yt-dlp==2025.1.26 && \
     # Clean up pip cache
     rm -rf /root/.cache/pip/* && \
     # Pre-compile Python files
