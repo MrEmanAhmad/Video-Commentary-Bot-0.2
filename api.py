@@ -178,8 +178,7 @@ try:
     # Initialize OpenAI client with API key from environment
     try:
         openai_client = OpenAI(
-            api_key=os.getenv('OPENAI_API_KEY'),
-            default_headers={"Content-Type": "application/json"}
+            api_key=os.getenv('OPENAI_API_KEY')
         )
         logger.info("✓ OpenAI client initialized")
     except Exception as e:
@@ -190,8 +189,7 @@ try:
     try:
         deepseek_client = OpenAI(
             api_key=os.getenv('DEEPSEEK_API_KEY'),
-            base_url="https://api.deepseek.com",
-            default_headers={"Content-Type": "application/json"}
+            base_url="https://api.deepseek.com"
         )
         logger.info("✓ DeepSeek client initialized")
     except Exception as e:

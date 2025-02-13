@@ -36,14 +36,12 @@ class PromptManager:
         try:
             if self.provider == LLMProvider.OPENAI:
                 self.client = OpenAI(
-                    api_key=os.getenv('OPENAI_API_KEY'),
-                    default_headers={"Content-Type": "application/json"}
+                    api_key=os.getenv('OPENAI_API_KEY')
                 )
             elif self.provider == LLMProvider.DEEPSEEK:
                 self.client = OpenAI(
                     api_key=os.getenv('DEEPSEEK_API_KEY'),
-                    base_url="https://api.deepseek.com",
-                    default_headers={"Content-Type": "application/json"}
+                    base_url="https://api.deepseek.com"
                 )
         except Exception as e:
             logger.error(f"Error setting up {self.provider.value} client: {str(e)}")
