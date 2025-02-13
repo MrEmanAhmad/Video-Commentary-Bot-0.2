@@ -8,7 +8,19 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     PORT=8000 \
     RAILWAY_ENVIRONMENT=production \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    # OpenAI and API settings
+    OPENAI_API_BASE="https://api.openai.com/v1" \
+    OPENAI_API_TYPE="open_ai" \
+    OPENAI_API_VERSION="2024-02-01" \
+    OPENAI_ORGANIZATION="" \
+    MODEL_NAME="gpt-4o-mini" \
+    # DeepSeek settings
+    DEEPSEEK_API_BASE="https://api.deepseek.com" \
+    # Timeout settings
+    HTTP_TIMEOUT=300 \
+    MAX_RETRIES=3 \
+    REQUEST_TIMEOUT=300
 
 # Create a non-root user
 RUN useradd -m -s /bin/bash app_user
@@ -77,13 +89,15 @@ COPY requirements.txt .
 # Install Python dependencies with optimizations - split into smaller chunks for better error handling
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     echo "Installing base dependencies..." && \
-    pip install --no-cache-dir --verbose numpy==1.24.3 pandas==2.2.3 psutil==5.9.8 python-dotenv==1.0.0 selenium==4.28.1 webdriver-manager==4.0.2 undetected-chromedriver==3.5.5 && \
+    pip install --no-cache-dir --verbose numpy==2.2.3 pandas==2.2.3 psutil==5.9.8 python-dotenv==1.0.0 && \
+    echo "Installing Selenium and related..." && \
+    pip install --no-cache-dir --verbose selenium==4.28.1 webdriver-manager==4.0.2 undetected-chromedriver==3.5.5 && \
     echo "Installing OpenAI and dependencies..." && \
-    pip install --no-cache-dir --verbose httpx>=0.24.1 openai==1.3.5 httpcore>=1.0.2 anyio>=4.2.0 sniffio>=1.1 && \
+    pip install --no-cache-dir --verbose httpx>=0.25.2,<0.26.0 openai==1.3.5 httpcore>=1.0.2 anyio>=3.5.0,<4.0.0 sniffio>=1.1 && \
     echo "Installing cloud services..." && \
-    pip install --no-cache-dir --verbose cloudinary==1.38.0 aiohttp==3.9.3 aiosignal==1.3.2 aiodns==3.1.1 aiolimiter==1.1.1 google-cloud-vision==3.9.0 google-cloud-texttospeech==2.14.1 && \
+    pip install --no-cache-dir --verbose cloudinary==1.38.0 aiohttp==3.11.12 aiosignal==1.3.2 aiodns==3.1.1 aiolimiter==1.1.1 async-timeout==5.0.1 google-cloud-vision==3.10.0 google-cloud-texttospeech==2.14.1 && \
     echo "Installing OpenCV..." && \
-    pip install --no-cache-dir --verbose opencv-python-headless==4.11.0.86 && \
+    pip install --no-cache-dir --verbose opencv-python==4.11.0.86 && \
     echo "Installing core ML dependencies..." && \
     pip install --no-cache-dir --verbose scikit-image==0.25.1 scipy==1.15.1 && \
     echo "Installing web dependencies..." && \
@@ -153,7 +167,12 @@ ENV HOME=/home/app_user \
     FFREPORT=file=/app/analysis_temp/ffmpeg-%p-%t.log \
     # Chrome/Selenium settings
     SELENIUM_HEADLESS=true \
-    PYTHONWARNINGS="ignore:Unverified HTTPS request"
+    PYTHONWARNINGS="ignore:Unverified HTTPS request" \
+    # API Client settings
+    OPENAI_REQUEST_TIMEOUT=300 \
+    OPENAI_MAX_RETRIES=3 \
+    OPENAI_BACKOFF_FACTOR=1 \
+    OPENAI_INITIAL_DELAY=1
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
