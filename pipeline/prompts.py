@@ -51,14 +51,26 @@ class PromptManager:
             if not self.client:
                 raise ValueError(f"{self.provider.value} client not initialized")
 
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                **kwargs
-            )
-            
-            return response.choices[0].message.content
-            
+            if self.provider == LLMProvider.OPENAI:
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "developer", "content": ""},
+                        {"role": "user", "content": messages}
+                    ]
+                )
+                return response.choices[0].message.content
+            else:
+                response = self.client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=[
+                        {"role": "system", "content": ""},
+                        {"role": "user", "content": messages}
+                    ],
+                    stream=False
+                )
+                return response.choices[0].message.content
+
         except Exception as e:
             logger.error(f"Error generating response: {str(e)}")
             raise

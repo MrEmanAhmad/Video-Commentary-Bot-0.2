@@ -177,10 +177,7 @@ try:
 
     # Initialize OpenAI client with API key from environment
     try:
-        # Clean initialization with only the required api_key parameter
-        openai_client = OpenAI(
-            api_key=os.getenv('OPENAI_API_KEY')
-        )
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         logger.info("✓ OpenAI client initialized")
     except Exception as e:
         logger.error(f"Failed to initialize OpenAI client: {e}")
@@ -188,7 +185,6 @@ try:
 
     # Initialize DeepSeek client with API key from environment
     try:
-        # Clean initialization with only the required parameters
         deepseek_client = OpenAI(
             api_key=os.getenv('DEEPSEEK_API_KEY'),
             base_url="https://api.deepseek.com"
@@ -201,7 +197,7 @@ try:
     # Initialize Google Text-to-Speech client
     try:
         from google.cloud import texttospeech
-        tts_client = texttospeech.TextToSpeechClient()
+        client = texttospeech.TextToSpeechClient()
         logger.info("✓ Google Text-to-Speech client initialized")
     except Exception as e:
         logger.error(f"Failed to initialize Text-to-Speech client: {e}")
@@ -271,7 +267,7 @@ def synthesize_speech(text, voice_params, is_ssml=False):
     else:
         synthesis_input = texttospeech.SynthesisInput(text=text)
         
-    response = tts_client.synthesize_speech(
+    response = client.synthesize_speech(
         input=synthesis_input,
         voice=voice_params,
         audio_config=AUDIO_CONFIG
@@ -366,7 +362,7 @@ async def process_video_task(video_url: str, output_dir: Path, settings: dict):
             # Generate commentary using the specified model
             logger.info("Generating commentary...")
             if settings['model'] == "gpt-4o-mini":
-                completion = openai_client.chat.completions.create(
+                completion = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[
                         {"role": "developer", "content": ""},
