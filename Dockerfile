@@ -89,23 +89,21 @@ COPY requirements.txt .
 # Install Python dependencies with optimizations - split into smaller chunks for better error handling
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     echo "Installing base dependencies..." && \
-    pip install --no-cache-dir --verbose numpy==2.2.3 pandas==2.2.3 psutil==5.9.8 python-dotenv==1.0.0 && \
+    pip install --no-cache-dir numpy==2.2.3 pandas==2.2.3 psutil==5.9.8 python-dotenv==1.0.0 && \
     echo "Installing Selenium and related..." && \
-    pip install --no-cache-dir --verbose selenium==4.28.1 webdriver-manager==4.0.2 undetected-chromedriver==3.5.5 && \
+    pip install --no-cache-dir selenium==4.28.1 webdriver-manager==4.0.2 undetected-chromedriver==3.5.5 && \
     echo "Installing OpenAI and dependencies..." && \
-    pip install --no-cache-dir --verbose httpx>=0.25.2,<0.26.0 openai==1.3.5 httpcore>=1.0.2 anyio>=3.5.0,<4.0.0 sniffio>=1.1 && \
+    pip install --no-cache-dir "httpx>=0.25.2" "openai==1.3.5" "httpcore>=1.0.2" "anyio>=3.5.0" "sniffio>=1.1" && \
     echo "Installing cloud services..." && \
-    pip install --no-cache-dir --verbose cloudinary==1.38.0 aiohttp==3.11.12 aiosignal==1.3.2 aiodns==3.1.1 aiolimiter==1.1.1 async-timeout==5.0.1 google-cloud-vision==3.10.0 google-cloud-texttospeech==2.14.1 && \
+    pip install --no-cache-dir cloudinary==1.38.0 aiohttp==3.11.12 aiosignal==1.3.2 aiodns==3.1.1 aiolimiter==1.1.1 async-timeout==5.0.1 google-cloud-vision==3.10.0 google-cloud-texttospeech==2.14.1 && \
     echo "Installing OpenCV..." && \
-    pip install --no-cache-dir --verbose opencv-python==4.11.0.86 && \
+    pip install --no-cache-dir opencv-python-headless==4.11.0.86 && \
     echo "Installing core ML dependencies..." && \
-    pip install --no-cache-dir --verbose scikit-image==0.25.1 scipy==1.15.1 && \
+    pip install --no-cache-dir scikit-image==0.25.1 scipy==1.15.1 && \
     echo "Installing web dependencies..." && \
-    pip install --no-cache-dir --verbose fastapi==0.115.8 uvicorn==0.34.0 && \
-    echo "Installing remaining requirements..." && \
-    pip install --no-cache-dir --verbose -r requirements.txt 2>&1 | tee pip_install.log && \
+    pip install --no-cache-dir fastapi==0.115.8 uvicorn==0.34.0 && \
     echo "Installing yt-dlp..." && \
-    pip install --no-cache-dir --verbose yt-dlp && \
+    pip install --no-cache-dir yt-dlp && \
     # Clean up pip cache
     rm -rf /root/.cache/pip/* && \
     # Pre-compile Python files
