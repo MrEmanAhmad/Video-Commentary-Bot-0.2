@@ -17,6 +17,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize API clients
+openai_client = OpenAI()  # Uses OPENAI_API_KEY from environment
+deepseek_client = OpenAI(
+    api_key=os.getenv('DEEPSEEK_API_KEY'),
+    base_url="https://api.deepseek.com"
+)
+
 # Load configuration
 try:
     # Define required variables
@@ -174,27 +181,6 @@ try:
         Step_5_generate_audio,
         Step_6_video_generation
     )
-
-    # Initialize OpenAI client with API key from environment
-    try:
-        openai_client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY")
-        )
-        logger.info("✓ OpenAI client initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize OpenAI client: {e}")
-        raise
-
-    # Initialize DeepSeek client with API key from environment
-    try:
-        deepseek_client = OpenAI(
-            api_key=os.getenv('DEEPSEEK_API_KEY'),
-            base_url="https://api.deepseek.com"
-        )
-        logger.info("✓ DeepSeek client initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize DeepSeek client: {e}")
-        raise
 
     # Initialize Google Text-to-Speech client
     try:
