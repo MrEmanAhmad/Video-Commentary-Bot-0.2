@@ -177,7 +177,10 @@ try:
 
     # Initialize OpenAI client with API key from environment
     try:
-        openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        # Clean initialization with only the required api_key parameter
+        openai_client = OpenAI(
+            api_key=os.getenv('OPENAI_API_KEY')
+        )
         logger.info("✓ OpenAI client initialized")
     except Exception as e:
         logger.error(f"Failed to initialize OpenAI client: {e}")
@@ -185,6 +188,7 @@ try:
 
     # Initialize DeepSeek client with API key from environment
     try:
+        # Clean initialization with only the required parameters
         deepseek_client = OpenAI(
             api_key=os.getenv('DEEPSEEK_API_KEY'),
             base_url="https://api.deepseek.com"
@@ -369,7 +373,7 @@ async def process_video_task(video_url: str, output_dir: Path, settings: dict):
                         {"role": "user", "content": json.dumps(frames_info)}
                     ]
                 )
-                audio_script = completion.choices[0].message
+                audio_script = completion.choices[0].message.content
             else:
                 response = deepseek_client.chat.completions.create(
                     model="deepseek-chat",
