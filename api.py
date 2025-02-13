@@ -18,10 +18,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize API clients
-openai_client = OpenAI()  # Uses OPENAI_API_KEY from environment
+openai_client = OpenAI(
+    api_key=os.getenv('OPENAI_API_KEY'),
+    base_url=os.getenv('OPENAI_API_BASE', "https://api.openai.com/v1"),
+    timeout=float(os.getenv('OPENAI_REQUEST_TIMEOUT', 300)),
+    max_retries=int(os.getenv('OPENAI_MAX_RETRIES', 3))
+)
 deepseek_client = OpenAI(
     api_key=os.getenv('DEEPSEEK_API_KEY'),
-    base_url="https://api.deepseek.com"
+    base_url="https://api.deepseek.com",
+    timeout=float(os.getenv('OPENAI_REQUEST_TIMEOUT', 300)),
+    max_retries=int(os.getenv('OPENAI_MAX_RETRIES', 3))
 )
 
 # Load configuration
