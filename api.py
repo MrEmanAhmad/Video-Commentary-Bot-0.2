@@ -293,6 +293,10 @@ async def health_check():
 async def process_video_task(video_url: str, output_dir: Path, settings: dict):
     """Process video from URL."""
     try:
+        # Convert to absolute path and create directory
+        output_dir = output_dir.absolute()
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
         # Create status file
         status_file = output_dir / "status.json"
         with open(status_file, 'w') as f:
@@ -302,6 +306,10 @@ async def process_video_task(video_url: str, output_dir: Path, settings: dict):
             }, f)
         
         try:
+            # Create lock file to prevent cleanup
+            lock_file = output_dir / ".processing.lock"
+            lock_file.touch()
+            
             # Download video
             logger.info(f"Downloading video from: {video_url}")
             success, metadata, video_title = Step_1_download_video.execute_step(video_url, output_dir)
@@ -389,21 +397,23 @@ async def process_video_task(video_url: str, output_dir: Path, settings: dict):
             audio_dir = output_dir / "audio"
             audio_dir.mkdir(exist_ok=True)
             
-            # Change to audio directory before synthesis
-            os.chdir(audio_dir)
-            audio_path = Path(synthesize_speech(
-                text=audio_script,
-                voice_params=voice_params,
-                is_ssml=False
-            ))
-            # Change back to original directory
-            os.chdir(output_dir)
+            # Synthesize speech and save to audio directory
+            synthesis_input = texttospeech.SynthesisInput(text=audio_script)
+            response = tts_client.synthesize_speech(
+                input=synthesis_input,
+                voice=voice_params,
+                audio_config=AUDIO_CONFIG
+            )
+            
+            audio_path = audio_dir / "output_audio.mp3"
+            with open(audio_path, "wb") as out:
+                out.write(response.audio_content)
             
             # Generate final video
             logger.info("Creating final video...")
             final_video = await Step_6_video_generation.execute_step(
-                Path(str(video_path)),
-                Path(str(audio_path)),
+                video_path,
+                audio_path,
                 output_dir,
                 settings['style']
             )
@@ -418,6 +428,20 @@ async def process_video_task(video_url: str, output_dir: Path, settings: dict):
                     "result": str(final_video)
                 }, f)
             
+            # Only run cleanup if explicitly enabled and processing is complete
+            if settings.get('auto_cleanup', False):
+                try:
+                    from pipeline import Step_7_cleanup
+                    # Keep the final video and status file
+                    keep_files = [final_video.name, "status.json"]
+                    Step_7_cleanup.execute_step(output_dir, settings['style'], keep_files)
+                except Exception as cleanup_error:
+                    logger.warning(f"Non-critical cleanup error: {cleanup_error}")
+            
+            # Remove lock file after successful processing
+            if lock_file.exists():
+                lock_file.unlink()
+            
         except Exception as e:
             logger.error(f"Error processing video: {str(e)}")
             with open(status_file, 'w') as f:
@@ -425,9 +449,15 @@ async def process_video_task(video_url: str, output_dir: Path, settings: dict):
                     "status": "error",
                     "message": str(e)
                 }, f)
+            # Remove lock file in case of error
+            if 'lock_file' in locals() and lock_file.exists():
+                lock_file.unlink()
             
     except Exception as e:
         logger.error(f"Error in process_video_task: {str(e)}")
+        # Ensure output directory exists before writing status
+        output_dir.mkdir(parents=True, exist_ok=True)
+        status_file = output_dir / "status.json"
         with open(status_file, 'w') as f:
             json.dump({
                 "status": "error",
